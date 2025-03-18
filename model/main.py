@@ -9,37 +9,50 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
+# Load environment variables
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 
+# Initialize Flask app
 app = Flask(__name__)
 
-# Simplify CORS configuration for development
-CORS(app, origins=[
-    "http://localhost:5173",    # Vite default
-    "http://localhost:3000",    # Just in case
-    "http://127.0.0.1:5173"     # Alternative localhost
-], methods=[
-    "GET", "POST", "PUT", "DELETE", "OPTIONS"
-], allow_headers=["Content-Type", "Authorization"],
-supports_credentials=True)
+# Dynamic CORS configuration
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",           # Vite default for local dev
+    "http://localhost:3000",           # Alternative local dev
+    "http://127.0.0.1:5173",           # Alternative localhost
+    "https://kalravhealth.netlify.app"     # Replace with your actual Netlify URL
+]
 
+# Add Render-specific origin if running on Render (optional, adjust as needed)
+if os.getenv("RENDER"):
+    ALLOWED_ORIGINS.append("https://mental-health-ai-rilr.onrender.com")  # Replace with your Render URL
+
+CORS(app, origins=ALLOWED_ORIGINS,
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"],
+     supports_credentials=True)
+
+# Gemini API setup
 genai.configure(api_key=API_KEY)
 chat_sessions = {}
-# Initialize MongoDB Connection
+
+# MongoDB Connection
 ATLAS_URI = "mongodb+srv://administrator:administrator@kalravcluster1.h3fsh.mongodb.net/?retryWrites=true&w=majority&appName=KalRavCluster1"
 client = MongoClient(ATLAS_URI)
 db = client["mental_health_db"]
 collection = db["user_inputs"]
 
+# Initialize timeline analyzer
 timeline_analyzer = TimelineSentimentAnalyzer()
 INITIAL_QUESTION = "Hi! Let's begin. How are you feeling today?"
+
 def generate_response_based_on_sentiment(user_input, sentiment):
     """Generate a response from Gemini based on user input and sentiment, focusing on providing help and guidance."""
     model = genai.GenerativeModel("gemini-1.5-pro")
     
-    # Create a prompt to provide a detailed and helpful response
+    # Create a prompt for a detailed, helpful response
     prompt = f"""
     The user said: "{user_input}"
     The detected sentiment is: {sentiment}
@@ -61,7 +74,7 @@ def generate_response_based_on_sentiment(user_input, sentiment):
     except Exception as e:
         print(f"Error generating response: {e}")
 
-    # Default fallback responses
+    # Fallback responses
     if sentiment.lower() == "negative":
         return (
             "I'm here for you. It sounds like you're going through a tough time. "
@@ -79,12 +92,9 @@ def generate_response_based_on_sentiment(user_input, sentiment):
             "listening to your favorite music, or simply reflecting on your emotions. Self-care is important."
         )
 
-
 @app.route('/api/process_input', methods=['POST'])
 def process_input():
-    """
-    Process user input, analyze sentiment and mental health concerns, store the data.
-    """
+    """Process user input, analyze sentiment and mental health concerns, store the data."""
     data = request.get_json()
     user_input = data.get('sentence', '').strip()
 
@@ -93,13 +103,12 @@ def process_input():
 
     if user_input.lower() == 'report':
         return jsonify({"report": timeline_analyzer.generate_graph("daily")})
-    
 
     sentiment, keywords = get_sentiment(user_input)
     concerns = extract_mental_health_concerns(user_input)
     concern_categories = {concern: classify_concern(concern) for concern in concerns}
     concern_intensities = {concern: score_intensity(concern) for concern in concerns}
-    response_message=generate_response_based_on_sentiment(user_input,sentiment)
+    response_message = generate_response_based_on_sentiment(user_input, sentiment)
 
     # Store input data in MongoDB
     entry = {
@@ -115,8 +124,6 @@ def process_input():
 
     timeline_analyzer.add_input(1, user_input, concerns, concern_categories, concern_intensities)
 
-    
-
     response = {
         "sentiment": sentiment,
         "response_message": response_message,
@@ -130,9 +137,7 @@ def process_input():
 
 @app.route('/api/get_graph', methods=['POST'])
 def get_graph():
-    """
-    Generate a graph based on the selected timeframe (hourly, daily, weekly).
-    """
+    """Generate a graph based on the selected timeframe (hourly, daily, weekly)."""
     data = request.get_json()
     timeframe = data.get("timeframe", "daily")
 
@@ -142,9 +147,7 @@ def get_graph():
 
 @app.route('/api/intensity-history', methods=['GET'])
 def get_history():
-    """
-    Fetch historical intensity scores for plotting trend data.
-    """
+    """Fetch historical intensity scores for plotting trend data."""
     history = list(collection.find({}, {"_id": 0, "timestamp": 1, "intensity_scores": 1}))
 
     formatted_history = []
@@ -166,21 +169,12 @@ def get_history():
     else:
         return jsonify({"error": "No historical data available."})
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
-
-# Add this route to test CORS
 @app.route('/api/test', methods=['GET'])
 def test_cors():
+    """Test endpoint to verify CORS configuration."""
     return jsonify({"message": "CORS is working"})
 
-# Main Deployment and Development server code 
-
+# Main Deployment and Development server code
 if __name__ == '__main__':
     try:
         port = int(os.environ.get("PORT", 5000))
