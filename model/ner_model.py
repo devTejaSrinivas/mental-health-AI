@@ -26,7 +26,7 @@ MENTAL_HEALTH_CATEGORIES = {
             "hopeless": 10, "depressed": 9, "worthless": 9, "sad": 7, "unmotivated": 6, 
             "empty": 8, "down": 5, "gloomy": 4, "lonely": 5, "miserable": 8, "melancholy": 7, 
             "drained": 7, "isolated": 9, "despair": 10, "numb": 9, "apathetic": 6, 
-            "content": 2, "hopeful": 1, "happy": 1
+            "content": 2, "hopeful": 1, "happy": 1,
         }
     },
     "Stress": {

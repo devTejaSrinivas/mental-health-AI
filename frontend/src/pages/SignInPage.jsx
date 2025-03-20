@@ -19,6 +19,12 @@ const SignInPage = () => {
           />
         </div>
         <div className="max-w-md mx-auto grid gap-5">
+          <button
+            className="bg-[#c334eb] text-white px-4 py-2 rounded-full w-max self-start hover:bg-gray-600"
+            onClick={() => navigate("/")}
+          >
+            Home
+          </button>
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center md:text-left">
             Login
           </h1>
