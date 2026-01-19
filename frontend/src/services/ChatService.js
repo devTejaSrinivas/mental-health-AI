@@ -3,9 +3,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const setupChatService = (apiKey) => {
   const genAI = new GoogleGenerativeAI(apiKey);
-  
+
   const model = genAI.getGenerativeModel({
-    model: "models/gemini-2.0-flash-lite",
+    model: "models/gemini-2.5-flash",
   });
 
   const sendMessage = async (message, modelChats) => {
@@ -18,10 +18,10 @@ export const setupChatService = (apiKey) => {
         },
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          withCredentials: true
-        }
+          withCredentials: true,
+        },
       );
 
       // Create a new chat with the updated history
@@ -35,7 +35,7 @@ export const setupChatService = (apiKey) => {
 
       return {
         analysisData: analysisResponse.data,
-        botResponse: textResponse
+        botResponse: textResponse,
       };
     } catch (error) {
       console.error("Error in chat service:", error);
