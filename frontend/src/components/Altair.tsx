@@ -1,17 +1,21 @@
-import { type FunctionDeclaration, SchemaType } from "@google/generative-ai";
 import { useEffect, useRef, useState, memo } from "react";
 import vegaEmbed from "vega-embed";
 import { useLiveAPIContext } from "../contexts/LiveAPIContext";
-import { ToolCall } from "../multimodal-live-types";
+import {
+  FunctionDeclaration,
+  LiveServerToolCall,
+  Modality,
+  Type,
+} from "@google/genai";
 
 const declaration: FunctionDeclaration = {
   name: "render_altair",
   description: "Displays an altair graph in json format.",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
       json_graph: {
-        type: SchemaType.STRING,
+        type: Type.STRING,
         description:
           "JSON STRING representation of the graph to render. Must be a string, not a json object",
       },
@@ -20,15 +24,21 @@ const declaration: FunctionDeclaration = {
   },
 };
 
+const modalityMap: Record<string, Modality> = {
+  text: Modality.TEXT,
+  audio: Modality.AUDIO,
+  image: Modality.IMAGE,
+};
+
 function AltairComponent() {
   const [jsonString, setJSONString] = useState<string>("");
-  const { client, setConfig, responseModality } = useLiveAPIContext();
+  const { client, setConfig, setModel, responseModality } = useLiveAPIContext();
 
   useEffect(() => {
+    setModel("models/gemini-2.5-flash-native-audio-preview-12-2025");
     setConfig({
-      model: "models/gemini-2.0-flash-exp",
       generationConfig: {
-        responseModalities: responseModality as "text" | "audio" | "image" | undefined,
+        responseModalities: [modalityMap[responseModality]],
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
         },
@@ -36,7 +46,7 @@ function AltairComponent() {
       systemInstruction: {
         parts: [
           {
-            text: 'You are Kalrav and now need to act like a professional mental health expert and figure out all the emotions of the user by asking a set of questions one by one. Introduce yourself. Do not give any recommendations on what to do just do your best to discover the emotions of the user. Have a genuine and purposeful conversation. So ask the questions carefully so you can extract feelings from the user. Once you believe the conversation is worth ending, say thank you and ask the user to "generate their mental health report of the day". Any time I ask you for a graph call the "render_altair" function I have provided you, Dont ask for additional information just make your best judgement.',
+            text: 'You are Kalrav and now need to act like a professional mental health expert and figure out all the emotions of the user by asking a set of questions one by one. Introduce yourself. Do not give any recommendations on what to do just do your best to discover the emotions of the user. Have a genuine and purposeful conversation. So ask the questions carefully so you can extract feelings from the user. Once you believe the conversation is worth ending, say thank you and ask the user to "generate their mental health report of the day". Any time I ask you for a graph call the "render_altair" function I have provided you. Dont ask for additional information just make your best judgement.',
           },
         ],
       },
@@ -46,11 +56,13 @@ function AltairComponent() {
         { functionDeclarations: [declaration] },
       ],
     });
-  }, [setConfig, responseModality]);
+  }, [setConfig, setModel, responseModality]);
 
   useEffect(() => {
-    const onToolCall = (toolCall: ToolCall) => {
-      console.log(`got toolcall`, toolCall);
+    const onToolCall = (toolCall: LiveServerToolCall) => {
+      if (!toolCall.functionCalls) {
+        return;
+      }
       const fc = toolCall.functionCalls.find(
         (fc) => fc.name === declaration.name,
       );
@@ -60,17 +72,17 @@ function AltairComponent() {
       }
       // send data for the response of your tool call
       // in this case Im just saying it was successful
-      if (toolCall.functionCalls.length) {
-        setTimeout(
-          () =>
-            client.sendToolResponse({
-              functionResponses: toolCall.functionCalls.map((fc) => ({
-                response: { output: { success: true } },
-                id: fc.id,
-              })),
-            }),
-          200,
-        );
+      if (toolCall.functionCalls && toolCall.functionCalls.length > 0) {
+        const responses = toolCall.functionCalls.map((fc) => ({
+          response: { output: { success: true } },
+          id: fc.id,
+        }));
+
+        setTimeout(() => {
+          client.sendToolResponse({
+            functionResponses: responses,
+          });
+        }, 200);
       }
     };
     client.on("toolcall", onToolCall);
@@ -80,7 +92,7 @@ function AltairComponent() {
   }, [client]);
 
   const embedRef = useRef<HTMLDivElement>(null);
-
+  console.log("jsonString", jsonString);
   useEffect(() => {
     if (embedRef.current && jsonString) {
       vegaEmbed(embedRef.current, JSON.parse(jsonString));
@@ -89,4 +101,4 @@ function AltairComponent() {
   return <div className="vega-embed" ref={embedRef} />;
 }
 
-export const Altair = AltairComponent;
+export const Altair = memo(AltairComponent);
