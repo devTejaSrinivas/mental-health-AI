@@ -5,7 +5,7 @@ export const setupChatService = (apiKey) => {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   const model = genAI.getGenerativeModel({
-    model: "models/gemini-2.5-flash",
+    model: "models/gemini-2.5-flash-lite",
   });
 
   const sendMessage = async (message, modelChats) => {

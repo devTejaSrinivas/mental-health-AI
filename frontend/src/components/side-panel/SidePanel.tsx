@@ -1,10 +1,12 @@
+import "./react-select.scss";
 import cn from "classnames";
-import { useEffect, useRef, useState, HTMLAttributes } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RiSidebarFoldLine, RiSidebarUnfoldLine } from "react-icons/ri";
 import Select from "react-select";
-import { useLiveAPIContext } from "../contexts/LiveAPIContext";
-import { useLoggerStore } from "../lib/store-logger";
-import Logger, { LoggerFilterType } from "../components/logger/Logger";
+import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
+import { useLoggerStore } from "../../lib/store-logger";
+import Logger, { LoggerFilterType } from "../../components/logger/Logger";
+import "./side-panel.scss";
 
 const filterOptions = [
   { value: "conversations", label: "Conversations" },
@@ -12,7 +14,7 @@ const filterOptions = [
   { value: "none", label: "All" },
 ];
 
-export default function SidePanel({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export default function SidePanel() {
   const { responseModality, connected, client } = useLiveAPIContext();
   const [open, setOpen] = useState(true);
   const loggerRef = useRef<HTMLDivElement>(null);
@@ -67,10 +69,7 @@ export default function SidePanel({ className, ...props }: HTMLAttributes<HTMLDi
 
   return (
     <div
-      className={`bg-[var(--Neutral-00)] flex flex-col h-screen border-r border-[var(--gray-600)] text-[var(--Neutral-90)] font-sans text-sm font-normal leading-[160%] transition-all duration-200 ease-in-out ${
-        open ? "w-[50%]" : "w-10"
-      } ${className || ""}`} 
-      {...props}
+      className={`bg-[var(--Neutral-00)] flex flex-col h-screen border-r border-[var(--gray-600)] text-[var(--Neutral-90)] font-sans text-sm font-normal leading-[160%] transition-all duration-200 ease-in-out ${open ? "w-[50%]" : "w-10"}`}
     >
       <header className="flex justify-between items-center border-b border-[var(--Neutral-20)] p-3">
         <h2
@@ -127,8 +126,8 @@ export default function SidePanel({ className, ...props }: HTMLAttributes<HTMLDi
               backgroundColor: isFocused
                 ? "var(--Neutral-30)"
                 : isSelected
-                ? "var(--Neutral-20)"
-                : undefined,
+                  ? "var(--Neutral-20)"
+                  : undefined,
             }),
           }}
           value={selectedOption}
@@ -175,7 +174,6 @@ export default function SidePanel({ className, ...props }: HTMLAttributes<HTMLDi
             }}
             onChange={(e) => setTextInput(e.target.value)}
             value={textInput}
-            placeholder="Type your message here..."
             rows={1}
           ></textarea>
           <span
