@@ -18,19 +18,8 @@ export type UseLiveAPIResults = {
   volume: number;
 };
 
-<<<<<<< HEAD
-export function useLiveAPI({
-  url,
-  apiKey,
-}: MultimodalLiveAPIClientConnection): UseLiveAPIResults {
-  const client = useMemo(
-    () => new MultimodalLiveClient({ url, apiKey }),
-    [url, apiKey],
-  );
-=======
 export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
->>>>>>> 5e754a3197dcc8a3512f2d986e4280a05b45b8d0
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [model, setModel] = useState<string>(
@@ -38,12 +27,6 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   );
   const [config, setConfig] = useState<LiveConnectConfig>({});
   const [connected, setConnected] = useState(false);
-<<<<<<< HEAD
-  const [config, setConfig] = useState<LiveConfig>({
-    model: "models/gemini-2.5-flash-native-audio-dialog",
-  });
-=======
->>>>>>> 5e754a3197dcc8a3512f2d986e4280a05b45b8d0
   const [volume, setVolume] = useState(0);
 
   // register audio for streaming server -> speakers
