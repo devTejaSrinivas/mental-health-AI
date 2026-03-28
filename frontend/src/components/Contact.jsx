@@ -2,7 +2,11 @@ import React from "react";
 import GitHubProfile from "./GitHubProfile";
 
 const ContactSection = () => {
-  const githubUsernames = ["devTejaSrinivas", "Kaushik-2802", "sohamchitimali"]; // Replace with actual GitHub usernames
+  const githubUsernames = [
+    "devTejaSrinivas",
+    "sudhanshu1826",
+    "sohamchitimali",
+  ]; // Replace with actual GitHub usernames
 
   return (
     <div className="py-16 px-4">
