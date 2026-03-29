@@ -8,13 +8,13 @@ export const setupChatService = (apiKey) => {
     model: "models/gemini-2.5-flash-lite",
   });
 
-  const sendMessage = async (message, modelChats) => {
+  const sendMessage = async (userMessage, modelChats, modelMessage = userMessage) => {
     try {
       // Analyze message with backend
       const analysisResponse = await axios.post(
         `${import.meta.env.VITE_SERVER_URL}/api/process_input`,
         {
-          sentence: message,
+          sentence: userMessage,
         },
         {
           headers: {
@@ -30,7 +30,7 @@ export const setupChatService = (apiKey) => {
       });
 
       // Send the message and get the response
-      const result = await chat.sendMessage(message);
+      const result = await chat.sendMessage(modelMessage);
       const textResponse = result.response.text();
 
       return {
