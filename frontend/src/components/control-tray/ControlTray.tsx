@@ -1,18 +1,22 @@
-import { memo, ReactNode, RefObject, useEffect, useRef, useState, HTMLAttributes } from "react";
+import cn from "classnames";
+
+import { memo, ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
 import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../lib/audio-recorder";
 import AudioPulse from "../audio-pulse/AudioPulse";
-import cn from "classnames";
+
 import "./control-tray.scss";
+import SettingsDialog from "../settings-dialog/SettingsDialog";
 
 export type ControlTrayProps = {
   videoRef: RefObject<HTMLVideoElement>;
   children?: ReactNode;
   supportsVideo: boolean;
   onVideoStreamChange?: (stream: MediaStream | null) => void;
+  enableEditingSettings?: boolean;
 };
 
 type MediaStreamButtonProps = {
@@ -44,6 +48,7 @@ function ControlTray({
   children,
   onVideoStreamChange = () => {},
   supportsVideo,
+  enableEditingSettings,
 }: ControlTrayProps) {
   const videoStreams = [useWebcam(), useScreenCapture()];
   const [activeVideoStream, setActiveVideoStream] =
@@ -55,7 +60,15 @@ function ControlTray({
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
   const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { client, connected, connect, disconnect, volume, responseModality, setResponseModality } = useLiveAPIContext();
+  const {
+    client,
+    connected,
+    connect,
+    disconnect,
+    volume,
+    responseModality,
+    setResponseModality,
+  } = useLiveAPIContext();
 
   useEffect(() => {
     if (!connected && connectButtonRef.current) {
@@ -192,25 +205,33 @@ function ControlTray({
         </div>
         <span className="text-indicator">Streaming</span>
       </div>
-      
+
       {/* button to change modality this button displays only when the connection is not established */}
-      {!connected && <div className={cn("modality-container")}>
-        <div className="modality-button-container">
-          <button
-            ref={connectButtonRef}
-            className={cn("action-button connect-toggle")}
-            onClick={() => {
-              responseModality === "audio" ? setResponseModality("text") : setResponseModality("audio");
-              console.log(responseModality);
-            }}
-          >
-            <span className="material-symbols-outlined filled">
-              {responseModality === "audio" ? "graphic_eq" :  "title"}
-            </span>
-          </button>
+      {!connected && (
+        <div className={cn("modality-container")}>
+          <div className="modality-button-container">
+            <button
+              ref={connectButtonRef}
+              className={cn("action-button connect-toggle")}
+              onClick={() => {
+                responseModality === "audio"
+                  ? setResponseModality("text")
+                  : setResponseModality("audio");
+                console.log(responseModality);
+              }}
+            >
+              <span className="material-symbols-outlined filled">
+                {responseModality === "audio" ? "graphic_eq" : "title"}
+              </span>
+            </button>
+          </div>
+          <span className="modality-indicator">
+            {responseModality === "audio" ? "Audio Output" : "Text Output"}
+          </span>
         </div>
-        <span className="modality-indicator">{responseModality === "audio" ? "Audio Output" : "Text Output" }</span>
-      </div>}
+      )}
+
+      {enableEditingSettings ? <SettingsDialog /> : ""}
     </section>
   );
 }

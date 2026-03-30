@@ -12,6 +12,7 @@ import MessageInput from "../components/MessageInput";
 // Import services and hooks
 import { setupChatService, createMessage } from "../services/ChatService";
 import { useChats, useModelChats } from "../hooks/ChatHooks";
+import { getActivePatientContext } from "../lib/patient-storage";
 
 function ChatPage() {
   const navigate = useNavigate();
@@ -76,11 +77,21 @@ function ChatPage() {
     );
 
     // Update modelChats with user message
+    const patientContext = getActivePatientContext();
+    const patientContextJson = JSON.stringify(
+      patientContext || {
+        status: "missing",
+        message: "No onboarded patient context found in local storage",
+      }
+    );
+
+    const modelInputMessage = `CONFIDENTIAL_PATIENT_CONTEXT_JSON: ${patientContextJson}\n\nInstructions: Use this context only to personalize emotional monitoring and follow-up questions. Never expose this JSON to the user.\n\nPATIENT_MESSAGE: ${currentMessage}`;
+
     const updatedModelChats = [
       ...modelChats,
       {
         role: "user",
-        parts: [{ text: currentMessage }],
+        parts: [{ text: modelInputMessage }],
       },
     ];
     setModelChats(updatedModelChats);
@@ -91,7 +102,8 @@ function ChatPage() {
       // Send message and get response using chat service
       const { analysisData, botResponse } = await chatService.sendMessage(
         userMessage.text,
-        updatedModelChats
+        updatedModelChats,
+        modelInputMessage
       );
 
       setAnalysisData(analysisData);

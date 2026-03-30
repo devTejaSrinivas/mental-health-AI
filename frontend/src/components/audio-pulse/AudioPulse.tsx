@@ -19,10 +19,10 @@ export default function AudioPulse({ active, volume, hover }: AudioPulseProps) {
     const update = () => {
       lines.current.forEach(
         (line, i) =>
-        (line.style.height = `${Math.min(
-          24,
-          4 + volume * (i === 1 ? 400 : 60),
-        )}px`),
+          (line.style.height = `${Math.min(
+            24,
+            4 + volume * (i === 1 ? 400 : 60),
+          )}px`),
       );
       timeout = window.setTimeout(update, 100);
     };

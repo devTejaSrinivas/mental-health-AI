@@ -1,37 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  MultimodalLiveAPIClientConnection,
-  MultimodalLiveClient,
-} from "../lib/multimodal-live-client";
-import { LiveConfig } from "../multimodal-live-types";
+import { GenAILiveClient } from "../lib/genai-live-client";
+import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
+import { LiveConnectConfig } from "@google/genai";
 
 export type UseLiveAPIResults = {
-  client: MultimodalLiveClient;
-  setConfig: (config: LiveConfig) => void;
-  config: LiveConfig;
+  client: GenAILiveClient;
+  setConfig: (config: LiveConnectConfig) => void;
+  config: LiveConnectConfig;
+  model: string;
+  setModel: (model: string) => void;
   connected: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   volume: number;
 };
 
-export function useLiveAPI({
-  url,
-  apiKey,
-}: MultimodalLiveAPIClientConnection): UseLiveAPIResults {
-  const client = useMemo(
-    () => new MultimodalLiveClient({ url, apiKey}),
-    [url, apiKey],
-  );
+export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
+  const client = useMemo(() => new GenAILiveClient(options), [options]);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
+  const [model, setModel] = useState<string>(
+    "models/gemini-2.5-flash-native-audio-preview-12-2025",
+  );
+  const [config, setConfig] = useState<LiveConnectConfig>({});
   const [connected, setConnected] = useState(false);
-  const [config, setConfig] = useState<LiveConfig>({
-    model: "models/gemini-2.0-flash-exp",
-  });
   const [volume, setVolume] = useState(0);
 
   // register audio for streaming server -> speakers
@@ -51,8 +46,16 @@ export function useLiveAPI({
   }, [audioStreamerRef]);
 
   useEffect(() => {
+    const onOpen = () => {
+      setConnected(true);
+    };
+
     const onClose = () => {
       setConnected(false);
+    };
+
+    const onError = (error: ErrorEvent) => {
+      console.error("error", error);
     };
 
     const stopAudioStreamer = () => audioStreamerRef.current?.stop();
@@ -61,27 +64,34 @@ export function useLiveAPI({
       audioStreamerRef.current?.addPCM16(new Uint8Array(data));
 
     client
+      .on("error", onError)
+      .on("open", onOpen)
       .on("close", onClose)
       .on("interrupted", stopAudioStreamer)
       .on("audio", onAudio);
 
+    client.on("log", (log) => {
+      console.log("GENAI LOG:", log.type, log.message);
+    });
+
     return () => {
       client
+        .off("error", onError)
+        .off("open", onOpen)
         .off("close", onClose)
         .off("interrupted", stopAudioStreamer)
-        .off("audio", onAudio);
+        .off("audio", onAudio)
+        .disconnect();
     };
   }, [client]);
 
   const connect = useCallback(async () => {
-    console.log(config);
     if (!config) {
       throw new Error("config has not been set");
     }
     client.disconnect();
-    await client.connect(config);
-    setConnected(true);
-  }, [client, setConnected, config]);
+    await client.connect(model, config);
+  }, [client, config, model]);
 
   const disconnect = useCallback(async () => {
     client.disconnect();
@@ -92,6 +102,8 @@ export function useLiveAPI({
     client,
     config,
     setConfig,
+    model,
+    setModel,
     connected,
     connect,
     disconnect,

@@ -20,6 +20,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { addPatientProfile, getPatientStore } from "../lib/patient-storage";
 
 // Import the ReportPage component
 import ReportPage from "./ReportPage"; // Adjust the import path as needed
@@ -36,7 +37,57 @@ const DoctorDashboardPage = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("daily");
   const [showFullReport, setShowFullReport] = useState(false);
   const [selectedAlertForReport, setSelectedAlertForReport] = useState(null);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [onboardingError, setOnboardingError] = useState("");
+  const [patientForm, setPatientForm] = useState({
+    name: "",
+    diagnosis: "",
+    currentMentalCondition: "",
+    watchBehaviors: "",
+    therapistInsights: "",
+  });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const store = getPatientStore();
+    setPatients(store.patients || []);
+  }, []);
+
+  const handlePatientFormChange = (e) => {
+    const { name, value } = e.target;
+    setPatientForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const resetPatientForm = () => {
+    setPatientForm({
+      name: "",
+      diagnosis: "",
+      currentMentalCondition: "",
+      watchBehaviors: "",
+      therapistInsights: "",
+    });
+  };
+
+  const handleAddPatient = (e) => {
+    e.preventDefault();
+    setOnboardingError("");
+
+    if (!patientForm.name.trim()) {
+      setOnboardingError("Patient name is required.");
+      return;
+    }
+
+    if (!patientForm.diagnosis.trim()) {
+      setOnboardingError("Mental health diagnosis is required.");
+      return;
+    }
+
+    const updatedStore = addPatientProfile(patientForm);
+    setPatients(updatedStore.patients || []);
+    resetPatientForm();
+    setShowOnboardingModal(false);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -469,6 +520,12 @@ const DoctorDashboardPage = () => {
             <h1 className="text-2xl font-bold">Doctor's Dashboard</h1>
           </div>
           <div className="flex items-center space-x-6">
+            <button
+              onClick={() => setShowOnboardingModal(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors font-medium"
+            >
+              Add Patient
+            </button>
             <div className="relative">
               <FaBell className="text-2xl text-slate-400 cursor-pointer hover:text-slate-300 transition-colors" />
               {alerts.length > 0 && (
@@ -583,7 +640,7 @@ const DoctorDashboardPage = () => {
                 <h3 className="text-sm text-slate-400 mb-1">
                   Patients Monitored
                 </h3>
-                <p className="text-2xl font-bold">5</p>
+                <p className="text-2xl font-bold">{patients.length}</p>
               </div>
               <div className="bg-slate-700/50 p-4 rounded-lg">
                 <h3 className="text-sm text-slate-400 mb-1">Response Rate</h3>
@@ -805,6 +862,122 @@ const DoctorDashboardPage = () => {
             )}
           </div>
         </div>
+
+        {showOnboardingModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-800 w-full max-w-2xl rounded-xl p-6 border border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Patient Onboarding</h2>
+                <button
+                  onClick={() => {
+                    setShowOnboardingModal(false);
+                    setOnboardingError("");
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {onboardingError && (
+                <div className="mb-4 bg-red-500/20 border border-red-400/30 text-red-200 p-3 rounded-lg text-sm">
+                  {onboardingError}
+                </div>
+              )}
+
+              <form onSubmit={handleAddPatient} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Patient Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={patientForm.name}
+                    onChange={handlePatientFormChange}
+                    className="w-full rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter patient name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Mental Health Diagnosis
+                  </label>
+                  <input
+                    type="text"
+                    name="diagnosis"
+                    value={patientForm.diagnosis}
+                    onChange={handlePatientFormChange}
+                    className="w-full rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Generalized Anxiety Disorder"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Current Mental Condition
+                  </label>
+                  <textarea
+                    name="currentMentalCondition"
+                    value={patientForm.currentMentalCondition}
+                    onChange={handlePatientFormChange}
+                    rows={3}
+                    className="w-full rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Current state summary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Behaviors / Signals to Watch During Chat
+                  </label>
+                  <textarea
+                    name="watchBehaviors"
+                    value={patientForm.watchBehaviors}
+                    onChange={handlePatientFormChange}
+                    rows={3}
+                    className="w-full rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. hopeless language, sleep-related concern spikes"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">
+                    Therapist Insights
+                  </label>
+                  <textarea
+                    name="therapistInsights"
+                    value={patientForm.therapistInsights}
+                    onChange={handlePatientFormChange}
+                    rows={3}
+                    className="w-full rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Additional context for AI monitoring"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOnboardingModal(false);
+                      setOnboardingError("");
+                    }}
+                    className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-medium"
+                  >
+                    Save Patient
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
