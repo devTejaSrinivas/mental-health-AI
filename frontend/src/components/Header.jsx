@@ -81,7 +81,7 @@ const Header = () => {
           className="button hidden mr-8 text-n-1/50 transition-colors hover:text-n-1 lg:block cursor-pointer"
           onClick={handleSignUp}
         >
-          New Account
+          NewAccount
         </a>
         <Button className="hidden lg:flex" onClick={handleSignIn}>
           Sign In
